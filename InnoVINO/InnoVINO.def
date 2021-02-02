@@ -1,0 +1,10 @@
+; InnoVINO.def : Declares the module parameters for the DLL.
+
+LIBRARY
+
+EXPORTS
+	IVINO_Init
+	IVINO_Inference
+	IVINO_FaceRecog
+	IVINO_Uninit
+    ; Explicit exports can go here
