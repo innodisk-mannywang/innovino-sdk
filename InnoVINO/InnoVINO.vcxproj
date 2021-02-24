@@ -202,7 +202,8 @@
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy /Y $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)bin\$(TargetName)$(TargetExt)</Command>
+      <Command>copy /Y $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)bin\$(TargetName)$(TargetExt)
+copy /Y $(OutDir)$(TargetName)$(TargetExt) D:\Workspace\Windows\Release\innovino-general-objectdetection-app\$(TargetName)$(TargetExt)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -72,12 +72,6 @@ void Log(LPCSTR lpMsg) {
 #endif
 }
 
-void Log(LPCWSTR lpMsg) {
-#ifdef _INNOVINO_DEBUG_
-	OutputDebugStringW(lpMsg);
-#endif
-}
-
 extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ_Model *pModel) {
 
 	Log("IVINO_Init...");
@@ -94,6 +88,21 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ
 	*dwServiceId = (INT_PTR)pOPVO;
 
 	Log("IVINO_Init...done");
+
+	return OK;
+}
+
+extern "C" __declspec(dllexport) int WINAPI IVINO_GetAvailableDevices(INT_PTR dwServiceId, AvailableDevices *pDevices) {
+
+	Log("IVINO_GetAvailableDevices...");
+
+	COPVO *pOPVO = (COPVO*)dwServiceId;
+	if (pOPVO == NULL)
+		return PARAMETER_MISMATCH;
+
+	pOPVO->GetAvailableDevices(pDevices);
+
+	Log("IVINO_GetAvailableDevices...done");
 
 	return OK;
 }

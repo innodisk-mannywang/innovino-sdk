@@ -5,6 +5,7 @@
 COPVO::COPVO() {
 	m_Device = "CPU";
 	//m_Device = "MYRIAD";
+	m_Devices = NULL;
 }
 
 COPVO::~COPVO() {
@@ -14,13 +15,86 @@ COPVO::~COPVO() {
 
 int COPVO::Init(OMZ_Model *pModel) {
 
+//	try
+//	{
+//		//Integration Steps of OpenVINO
+//		//1. Initialize Core
+//		Core ie;
+//		//2. Read Model IR
+//		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);		
+//		//3. Configure Input & Output		
+//		InputsDataMap inputsDataMap = cnnNetwork.getInputsInfo();
+//		InputsDataMap::iterator input = inputsDataMap.begin();
+//		m_InputName = input->first;
+//		m_InputInfo = input->second;
+//		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices. 
+//		//Generally, U8 is preferable as it is most ubiquitous.
+//		m_InputInfo->setPrecision(Precision::U8);
+//		OutputsDataMap outpusDataMap = cnnNetwork.getOutputsInfo();
+//		OutputsDataMap::iterator output = outpusDataMap.begin();
+//		m_OutputName = output->first;
+//		m_OutputInfo = output->second;
+//		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices. 
+//		//Generally, FP32 is preferable as it is most ubiquitous.
+//		m_OutputInfo->setPrecision(Precision::FP32);
+//		//4. Load Model		
+//		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);		
+//		//5. Create InferRequest
+//		m_InferRequest = exeNetwork.CreateInferRequest();
+//	}
+//	catch (const std::exception& e)
+//	{
+//		OutputDebugStringA(e.what());
+//		return 1;
+//	}
+//
+//#ifdef _INNOVINO_DEBUG_
+//	_show_model_info();
+//#endif
+
+	return OK;
+}
+
+int COPVO::GetAvailableDevices(AvailableDevices *pDevices) {
+	
+	//get available devices from openvino
+	Core core;
+	vector<string> availableDevices = core.GetAvailableDevices();
+
+	if (m_Devices) {
+		free(m_Devices);
+		m_Devices = NULL;
+	}
+	else {
+		//prepare device informaion
+		m_Devices = (Device*)malloc(sizeof(Device) * availableDevices.size());
+		memset(m_Devices, 0, sizeof(Device) * availableDevices.size());
+	}
+	
+	/*char szMsg[MAX_PATH] = { 0 };
+	sprintf_s(szMsg, "nCount : %d", availableDevices.size());
+	OutputDebugStringA(szMsg);*/
+
+	for (int i = 0; i < availableDevices.size(); i++) {
+		sprintf_s(m_Devices[i].szName, "%s",availableDevices[i].c_str());		
+		/*OutputDebugStringA(m_Devices[i].szName);*/
+	}
+
+	pDevices->nCount = availableDevices.size();
+	pDevices->pDevices = (INT_PTR)m_Devices;
+	
+	return OK;
+}
+
+int COPVO::AddModel(OMZ_Model *pModel) {
+
 	try
 	{
 		//Integration Steps of OpenVINO
 		//1. Initialize Core
 		Core ie;
 		//2. Read Model IR
-		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);		
+		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);
 		//3. Configure Input & Output		
 		InputsDataMap inputsDataMap = cnnNetwork.getInputsInfo();
 		InputsDataMap::iterator input = inputsDataMap.begin();
@@ -37,7 +111,7 @@ int COPVO::Init(OMZ_Model *pModel) {
 		//Generally, FP32 is preferable as it is most ubiquitous.
 		m_OutputInfo->setPrecision(Precision::FP32);
 		//4. Load Model		
-		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);		
+		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);
 		//5. Create InferRequest
 		m_InferRequest = exeNetwork.CreateInferRequest();
 	}
@@ -54,13 +128,13 @@ int COPVO::Init(OMZ_Model *pModel) {
 	return OK;
 }
 
-int COPVO::AddModel(OMZ_Model *pModel) {
-
-	return OK;
-}
-
 int COPVO::Uninit() {
 
+	//free all objects
+	if (m_Devices) {
+		free(m_Devices);
+		m_Devices = NULL;
+	}
 
 	return OK;
 }

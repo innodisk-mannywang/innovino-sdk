@@ -21,11 +21,29 @@ enum ModelType
 	SPHEREFACE,
 };
 
+enum DeviceType
+{
+	CPU,
+	GNA,
+	GPU,
+	MYRIAD,
+};
+
 #pragma pack(1)
 typedef struct tagOMZ_Model {
 	LPCSTR		lpXML;
 	LPCSTR		lpBIN;
 }OMZ_Model;
+
+typedef struct tagDevice {
+	INT32		nType;
+	char		szName[10];
+}Device;
+
+typedef struct tagAvailableDevices {
+	int			nCount;
+	INT_PTR		pDevices;
+}AvailableDevices;
 
 typedef struct tagImageData {
 	UINT16		uiWidth;

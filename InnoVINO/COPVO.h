@@ -19,6 +19,7 @@ public:
 					~COPVO();
 
 	int				Init(OMZ_Model *pModel);
+	int				GetAvailableDevices(AvailableDevices *pDevices);
 	int				AddModel(OMZ_Model *pModel);
 	int				Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync);
 	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync);
@@ -35,6 +36,7 @@ private:
 	string			m_OutputName;
 	float			m_fXRatio;
 	float			m_fYRatio;
+	Device*			m_Devices;
 
 
 	void			_show_model_info();
