@@ -72,7 +72,7 @@ void Log(LPCSTR lpMsg) {
 #endif
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ_Model *pModel) {
+extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId) {
 
 	Log("IVINO_Init...");
 
@@ -80,10 +80,7 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ
 	if (pOPVO == NULL)
 		return PARAMETER_MISMATCH;
 
-	Log(pModel->lpBIN);
-	Log(pModel->lpXML);
-
-	pOPVO->Init(pModel);
+	pOPVO->Init();
 
 	*dwServiceId = (INT_PTR)pOPVO;
 
@@ -107,7 +104,7 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_GetAvailableDevices(INT_PTR dw
 	return OK;
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_AddModel(INT_PTR dwServiceId, OMZ_Model *pModel) {
+extern "C" __declspec(dllexport) int WINAPI IVINO_AddEngine(INT_PTR dwServiceId, OMZ_Model *pModel) {
 
 	Log("IVINO_AddModel...");
 
@@ -115,11 +112,11 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_AddModel(INT_PTR dwServiceId, 
 	if (pOPVO == NULL)
 		return PARAMETER_MISMATCH;
 
-
+	int nEngineId = pOPVO->AddEngine(pModel);
 
 	Log("IVINO_AddModel...done");
 
-	return OK;
+	return nEngineId;
 }
 
 extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) {

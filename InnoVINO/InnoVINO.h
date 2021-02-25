@@ -33,6 +33,7 @@ enum DeviceType
 typedef struct tagOMZ_Model {
 	LPCSTR		lpXML;
 	LPCSTR		lpBIN;
+	LPCSTR		lpDevice;
 }OMZ_Model;
 
 typedef struct tagDevice {

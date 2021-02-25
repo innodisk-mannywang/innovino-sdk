@@ -3,8 +3,6 @@
 
 
 COPVO::COPVO() {
-	m_Device = "CPU";
-	//m_Device = "MYRIAD";
 	m_Devices = NULL;
 }
 
@@ -13,45 +11,7 @@ COPVO::~COPVO() {
 }
 
 
-int COPVO::Init(OMZ_Model *pModel) {
-
-//	try
-//	{
-//		//Integration Steps of OpenVINO
-//		//1. Initialize Core
-//		Core ie;
-//		//2. Read Model IR
-//		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);		
-//		//3. Configure Input & Output		
-//		InputsDataMap inputsDataMap = cnnNetwork.getInputsInfo();
-//		InputsDataMap::iterator input = inputsDataMap.begin();
-//		m_InputName = input->first;
-//		m_InputInfo = input->second;
-//		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices. 
-//		//Generally, U8 is preferable as it is most ubiquitous.
-//		m_InputInfo->setPrecision(Precision::U8);
-//		OutputsDataMap outpusDataMap = cnnNetwork.getOutputsInfo();
-//		OutputsDataMap::iterator output = outpusDataMap.begin();
-//		m_OutputName = output->first;
-//		m_OutputInfo = output->second;
-//		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices. 
-//		//Generally, FP32 is preferable as it is most ubiquitous.
-//		m_OutputInfo->setPrecision(Precision::FP32);
-//		//4. Load Model		
-//		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);		
-//		//5. Create InferRequest
-//		m_InferRequest = exeNetwork.CreateInferRequest();
-//	}
-//	catch (const std::exception& e)
-//	{
-//		OutputDebugStringA(e.what());
-//		return 1;
-//	}
-//
-//#ifdef _INNOVINO_DEBUG_
-//	_show_model_info();
-//#endif
-
+int COPVO::Init() {
 	return OK;
 }
 
@@ -75,18 +35,22 @@ int COPVO::GetAvailableDevices(AvailableDevices *pDevices) {
 	sprintf_s(szMsg, "nCount : %d", availableDevices.size());
 	OutputDebugStringA(szMsg);*/
 
+	int nDeviceCount = 0;
 	for (int i = 0; i < availableDevices.size(); i++) {
-		sprintf_s(m_Devices[i].szName, "%s",availableDevices[i].c_str());		
+		if (strcmp(availableDevices[i].c_str(), "GNA") != 0) {
+			sprintf_s(m_Devices[nDeviceCount].szName, "%s", availableDevices[i].c_str());
+			nDeviceCount++;
+		}
 		/*OutputDebugStringA(m_Devices[i].szName);*/
 	}
 
-	pDevices->nCount = availableDevices.size();
+	pDevices->nCount = nDeviceCount;
 	pDevices->pDevices = (INT_PTR)m_Devices;
 	
-	return OK;
+	return pDevices->nCount;
 }
 
-int COPVO::AddModel(OMZ_Model *pModel) {
+int COPVO::AddEngine(OMZ_Model *pModel) {
 
 	try
 	{
@@ -327,9 +291,6 @@ int	COPVO::FreeObjectDatas(ObjectDatas pOutput) {
 void COPVO::_show_model_info() {
 
 	char szMsg[MAX_PATH] = { 0 };
-
-	sprintf_s(szMsg, "Device : %s", m_Device);
-	OutputDebugStringA(szMsg);
 
 	if (m_InputInfo) {
 		const SizeVector inputDims = m_InputInfo->getTensorDesc().getDims();

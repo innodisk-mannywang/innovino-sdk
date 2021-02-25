@@ -18,9 +18,9 @@ public:
 					COPVO();
 					~COPVO();
 
-	int				Init(OMZ_Model *pModel);
+	int				Init();
 	int				GetAvailableDevices(AvailableDevices *pDevices);
-	int				AddModel(OMZ_Model *pModel);
+	int				AddEngine(OMZ_Model *pModel);
 	int				Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync);
 	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync);
 	int				ConverPtrToObjectDatas(int type, INT_PTR pInput, int size, INT_PTR *pOutput);
@@ -31,13 +31,11 @@ private:
 	InferRequest	m_InferRequest;
 	InputInfo::Ptr	m_InputInfo;
 	DataPtr			m_OutputInfo;
-	string			m_Device;
 	string			m_InputName;
 	string			m_OutputName;
 	float			m_fXRatio;
 	float			m_fYRatio;
 	Device*			m_Devices;
-
 
 	void			_show_model_info();
 	void			_image_preprocess(Mat *pImage);
