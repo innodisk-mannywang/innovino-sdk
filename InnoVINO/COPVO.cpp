@@ -75,7 +75,7 @@ int COPVO::AddEngine(OMZ_Model *pModel) {
 		//Generally, FP32 is preferable as it is most ubiquitous.
 		m_OutputInfo->setPrecision(Precision::FP32);
 		//4. Load Model		
-		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);
+		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, pModel->lpDevice);
 		//5. Create InferRequest
 		m_InferRequest = exeNetwork.CreateInferRequest();
 	}
