@@ -37,7 +37,7 @@ int COPVO::GetAvailableDevices(AvailableDevices *pDevices) {
 
 	int nDeviceCount = 0;
 	for (int i = 0; i < availableDevices.size(); i++) {
-		if (strcmp(availableDevices[i].c_str(), "GNA") != 0) {
+		if (strcmp(availableDevices[i].c_str(), "GNA") != 0 && strcmp(availableDevices[i].c_str(), "GPU") != 0) {
 			sprintf_s(m_Devices[nDeviceCount].szName, "%s", availableDevices[i].c_str());
 			nDeviceCount++;
 		}
@@ -117,11 +117,7 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 		//Do infernece and calculate the time cost.
 		DWORD dwStart = GetTickCount();
 		m_InferRequest.Infer();
-		
-		char szMsg[MAX_PATH] = { 0 };
-		/*sprintf_s(szMsg, "Infer time cost : %u", GetTickCount() - dwStart);
-		OutputDebugStringA(szMsg);*/
-				
+
 		Blob::Ptr output_blob = m_InferRequest.GetBlob(m_OutputName);
 		MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
 		if (!moutput) {
