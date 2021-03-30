@@ -134,6 +134,36 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId,
 	return nResult;
 }
 
+extern "C" __declspec(dllexport) int WINAPI IVINO_AddFace(INT_PTR dwServiceId, ImageData *pImage, LPCSTR lpLabel) {
+
+	Log("IVINO_AddFace...");
+
+	COPVO *pOPVO = (COPVO*)dwServiceId;
+	if (pOPVO == NULL)
+		return PARAMETER_MISMATCH;
+
+	float nResult = pOPVO->AddFace(pImage, lpLabel);
+
+	Log("IVINO_AddFace...done");
+
+	return OK;
+}
+
+extern "C" __declspec(dllexport) int WINAPI IVINO_FaceRecogEx(INT_PTR dwServiceId, ImageData *pImage, ObjectData *pOutput) {
+
+	Log("IVINO_FaceRecogEx...");
+
+	COPVO *pOPVO = (COPVO*)dwServiceId;
+	if (pOPVO == NULL)
+		return PARAMETER_MISMATCH;
+
+	float nResult = pOPVO->FaceRecogEx(pImage, pOutput);
+
+	Log("IVINO_FaceRecogEx...done");
+
+	return OK;
+}
+
 extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 
 	Log("IVINO_FaceRecog...");
@@ -148,36 +178,6 @@ extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceI
 
 	return nResult;
 }
-
-//extern "C" __declspec(dllexport) int WINAPI IVINO_ConvertPtrToObjectDatas(INT_PTR dwServiceId, int type, INT_PTR pOutput, int size, INT_PTR *pDatas) {
-//
-//	Log("IVINO_ConvertPtrToOD_Data...");
-//
-//	COPVO *pOPVO = (COPVO*)dwServiceId;
-//	if (pOPVO == NULL)
-//		return PARAMETER_MISMATCH;
-//
-//	pOPVO->ConverPtrToObjectDatas(type, pOutput, size, pDatas);
-//
-//	Log("IVINO_ConvertPtrToOD_Data...done");
-//
-//	return OK;
-//}
-//
-//extern "C" __declspec(dllexport) int WINAPI IVINO_FreeObjectDatas(INT_PTR dwServiceId, ObjectDatas pOutput) {
-//
-//	Log("IVINO_FreeObjectDatas...");
-//
-//	COPVO *pOPVO = (COPVO*)dwServiceId;
-//	if (pOPVO == NULL)
-//		return PARAMETER_MISMATCH;
-//	
-//	pOPVO->FreeObjectDatas(pOutput);
-//
-//	Log("IVINO_FreeObjectDatas...done");
-//
-//	return OK;
-//}
 
 extern "C" __declspec(dllexport) int WINAPI IVINO_Uninit(INT_PTR dwServiceId) {
 
