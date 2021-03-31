@@ -149,7 +149,7 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_AddFace(INT_PTR dwServiceId, I
 	return OK;
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_FaceRecogEx(INT_PTR dwServiceId, ImageData *pImage, ObjectData *pOutput) {
+extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecogEx(INT_PTR dwServiceId, ImageData *pImage, ObjectData *pOutput) {
 
 	Log("IVINO_FaceRecogEx...");
 
@@ -161,7 +161,7 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_FaceRecogEx(INT_PTR dwServiceI
 
 	Log("IVINO_FaceRecogEx...done");
 
-	return OK;
+	return nResult;
 }
 
 extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {

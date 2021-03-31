@@ -48,8 +48,7 @@ private:
 	vector<Mat>		mFaceMats;
 
 	void			_show_model_info();
-	void			_image_preprocess(Mat *pImage);
-	INT_PTR			_convert_to_objects(INT_PTR pInput, int size);
+	void			_image_preprocess(Mat *pImage);	
 	float			_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
 	float			_euclidean_distance(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
 
@@ -57,6 +56,4 @@ private:
 	int				_initial_frengine(LPCSTR lpDevice);
 	void			_facedetection_preprocess(Mat *pImage);
 	void			_facerecognition_preprocess(Mat *pImage);
-	int				_write_features();
-	int				_read_features();
 };

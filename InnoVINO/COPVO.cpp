@@ -13,7 +13,7 @@ COPVO::~COPVO() {
 
 int COPVO::Init() {
 
-	_initial_frengine("CPU");	
+	_initial_frengine("CPU");
 
 	return OK;
 }
@@ -33,18 +33,13 @@ int COPVO::GetAvailableDevices(AvailableDevices *pDevices) {
 		m_Devices = (Device*)malloc(sizeof(Device) * availableDevices.size());
 		memset(m_Devices, 0, sizeof(Device) * availableDevices.size());
 	}
-	
-	/*char szMsg[MAX_PATH] = { 0 };
-	sprintf_s(szMsg, "nCount : %d", availableDevices.size());
-	OutputDebugStringA(szMsg);*/
 
 	int nDeviceCount = 0;
 	for (int i = 0; i < availableDevices.size(); i++) {
 		if (strcmp(availableDevices[i].c_str(), "GNA") != 0 && strcmp(availableDevices[i].c_str(), "GPU") != 0) {
 			sprintf_s(m_Devices[nDeviceCount].szName, "%s", availableDevices[i].c_str());
 			nDeviceCount++;
-		}
-		/*OutputDebugStringA(m_Devices[i].szName);*/
+		}		
 	}
 
 	pDevices->nCount = nDeviceCount;
@@ -219,18 +214,14 @@ float COPVO::FaceRecogEx(ImageData *pImage, ObjectData *pOutput) {
 
 		auto moutputHolder = moutput->rmap();
 		const float *output = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-		float fFace[513] = { 0 };
+		float fFace[513] = { 0.0f };
 		memcpy(fFace, output, 512);
 		
 		float highestValue = 0.0f;
 		int	  highestIndex = 0;
 
 		for (int i = 0 ; i < mFaceFeatures.size() - 1 ; i++ ) {
-			char szMsg[MAX_PATH] = { 0 };
-						
 			float result = _cosine_similarity(fFace, mFaceFeatures[i], 512);
-			//sprintf(szMsg, "[%s] : %f", mFaceLabels[i], result);
-			//OutputDebugStringA(szMsg);
 			if (result > highestValue) {
 				highestValue = result;
 				highestIndex = i;
@@ -367,54 +358,6 @@ void COPVO::_image_preprocess(Mat *pImage) {
 	}
 }
 
-INT_PTR COPVO::_convert_to_objects(INT_PTR pInput, int size) {
-
-	if (pInput == NULL || m_OutputInfo == NULL)
-		return NULL;
-
-	const SizeVector outputDims = m_OutputInfo->getTensorDesc().getDims();
-	const int objectSize = outputDims[3];
-	const SizeVector inputDims = m_InputInfo->getTensorDesc().getDims();
-	const int nHeight = inputDims[2];
-	const int nWidth = inputDims[3];
-	vector<ObjectData> objects;
-
-	const float *output = (float*)pInput;
-	for (int curProposal = 0; curProposal < size; curProposal++) {
-		int image_id = static_cast<int>(output[curProposal * objectSize + 0]);
-		if (image_id < 0) {
-			break;
-		}
-
-		ObjectData obj = { 0 };
-		obj.conf = output[curProposal * objectSize + 2];
-		obj.label = static_cast<int>(output[curProposal * objectSize + 1]);
-		obj.x_min = static_cast<int>(output[curProposal * objectSize + 3] * nWidth) * m_fXRatio;
-		obj.y_min = static_cast<int>(output[curProposal * objectSize + 4] * nHeight) * m_fYRatio;
-		obj.x_max = static_cast<int>(output[curProposal * objectSize + 5] * nWidth) * m_fXRatio;
-		obj.y_max = static_cast<int>(output[curProposal * objectSize + 6] * nHeight) * m_fYRatio;
-		objects.push_back(obj);
-	}
-
-	/*OD_Datas *pDatas = new OD_Datas();
-	if (pDatas) {
-		pDatas->nCount = objects.size();
-		ObjectData *data = (ObjectData*)malloc(sizeof(ObjectData) * pDatas->nCount);
-		if (data) {
-			memset(data, 0, sizeof(ObjectData) * pDatas->nCount);
-
-			for (int n = 0; n < pDatas->nCount ; n++)
-			{
-				data[n] = objects[n];
-			}
-		}
-		pDatas->pObjects = (INT_PTR)data;
-		objects.clear();
-	}*/
-
-	return OK;
-}
-
 float COPVO::_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size) {
 
 	float dot = 0.0, denom_a = 0.0, denom_b = 0.0;
@@ -479,7 +422,6 @@ int COPVO::_initial_frengine(LPCSTR lpDevice) {
 		GetModuleFileNameA(AfxGetInstanceHandle(), szPath, MAX_PATH);
 		*(strrchr(szPath, '\\') + 1) = 0;
 		strcat(szPath, "Sphereface.xml");
-		OutputDebugStringA(szPath);
 		CNNNetwork fr_cnnNetwork = fr_ie.ReadNetwork(szPath);
 		//3. Configure Input & Output		
 		InputsDataMap fr_inputsDataMap = fr_cnnNetwork.getInputsInfo();
@@ -562,7 +504,6 @@ int	COPVO::AddFace(ImageData *pImage, LPCSTR lpLabel) {
 		//Scale image size that fit input size in model.
 		Mat img1(pImage->uiHeight, pImage->uiWidth, CV_8UC3, (BYTE*)pImage->pData);
 		_facerecognition_preprocess(&img1);
-		//_facedetection_preprocess(&img1, lpLabel);
 
 		//Do infernece and calculate the time cost.
 		DWORD dwStart = GetTickCount();
@@ -584,27 +525,12 @@ int	COPVO::AddFace(ImageData *pImage, LPCSTR lpLabel) {
 
 		mFaceFeatures.push_back(fFace);
 		mFaceLabels.push_back(lpLabel);
-
-		//char szMsg[MAX_PATH] = { 0 };
-		//sprintf(szMsg, "fFace : %p, label : %s", fFace, lpLabel);
-		//OutputDebugStringA(szMsg);
 	}
 	catch (const std::exception& e)
 	{
 		OutputDebugStringA(e.what());
 		return GENERAL_ERROR;
 	}
-
-	return OK;
-}
-
-
-int COPVO::_write_features() {
-
-	return OK;
-}
-
-int COPVO::_read_features() {
 
 	return OK;
 }
