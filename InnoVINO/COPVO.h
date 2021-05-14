@@ -7,23 +7,24 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
+#include <stdio.h>
+
 using namespace InferenceEngine;
 using namespace cv;
 using namespace std;
 
 class COPVO
 {
-
 public:
 					COPVO();
 					~COPVO();
 
 	int				Init(OMZ_Model *pModel);
 	int				AddModel(OMZ_Model *pModel);
-	int				Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync);
-	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync);
-	int				ConverPtrToObjectDatas(int type, INT_PTR pInput, int size, INT_PTR *pOutput);
-	int				FreeObjectDatas(ObjectDatas pOutput);
+	int				Inference(ImageData *pImage, ObjectDatas *pOutput, bool bAsync);
+	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, bool bAsync);
+	// int				ConverPtrToObjectDatas(int type, void *pInput, int size, void *pOutput);
+	int				FreeObjectDatas(ObjectDatas *pOutput);
 	int				Uninit();
 
 private:
@@ -36,10 +37,9 @@ private:
 	float			m_fXRatio;
 	float			m_fYRatio;
 
-
 	void			_show_model_info();
 	void			_image_preprocess(Mat *pImage);
-	INT_PTR			_convert_to_objects(INT_PTR pInput, int size);
+	void*			_convert_to_objects(void *pInput, int size);
 	float			_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
 	float			_euclidean_distance(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
 };

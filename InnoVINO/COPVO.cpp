@@ -1,6 +1,15 @@
-#include "pch.h"
 #include "COPVO.h"
+#include <limits.h>
 
+typedef unsigned char	BYTE;
+#define MAX_PATH		256
+
+void Log(char* szMsg)
+{
+	char szContent[PATH_MAX] = {0};
+	sprintf(szContent, "%s\n", szMsg);
+	printf(szContent);
+}
 
 COPVO::COPVO() {
 	m_Device = "CPU";
@@ -16,18 +25,24 @@ int COPVO::Init(OMZ_Model *pModel) {
 
 	try
 	{
+		printf("COPVO::Init...\n");
 		//Integration Steps of OpenVINO
 		//1. Initialize Core
 		Core ie;
 		//2. Read Model IR
-		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);		
+		printf("ie.ReadNetwork...\n");
+		CNNNetwork cnnNetwork = ie.ReadNetwork(pModel->lpXML);
+		printf("ie.ReadNetwork...done\n");
 		//3. Configure Input & Output		
+		printf("ie.Configure Input...\n");
 		InputsDataMap inputsDataMap = cnnNetwork.getInputsInfo();
 		InputsDataMap::iterator input = inputsDataMap.begin();
 		m_InputName = input->first;
 		m_InputInfo = input->second;
+		printf("ie.Configure Input...done\n");
 		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices. 
 		//Generally, U8 is preferable as it is most ubiquitous.
+		printf("ie.Configure Output...\n");
 		m_InputInfo->setPrecision(Precision::U8);
 		OutputsDataMap outpusDataMap = cnnNetwork.getOutputsInfo();
 		OutputsDataMap::iterator output = outpusDataMap.begin();
@@ -36,14 +51,20 @@ int COPVO::Init(OMZ_Model *pModel) {
 		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices. 
 		//Generally, FP32 is preferable as it is most ubiquitous.
 		m_OutputInfo->setPrecision(Precision::FP32);
-		//4. Load Model		
-		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, m_Device);		
+		printf("ie.Configure Output...done\n");
+		//4. Load Model
+		// printf("ie.LoadNetwork...\n");
+		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, "CPU");
+		// printf("ie.LoadNetwork...done\n");
 		//5. Create InferRequest
+		printf("ie.CreateInferRequest...\n");
 		m_InferRequest = exeNetwork.CreateInferRequest();
+		printf("ie.CreateInferRequest...done\n");
+		printf("COPVO::Init...done\n");
 	}
 	catch (const std::exception& e)
 	{
-		OutputDebugStringA(e.what());
+		printf(e.what());
 		return 1;
 	}
 
@@ -65,19 +86,19 @@ int COPVO::Uninit() {
 	return OK;
 }
 
-int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
+int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, bool bAsync) {
 
 	if (pImage == NULL || pOutput == NULL)
 		return PARAMETER_MISMATCH;
 
 	try
-	{
+	{		
 		//Scale image size that fit input size in model.
 		Mat mat(pImage->uiHeight, pImage->uiWidth, CV_8UC3, (BYTE*)pImage->pData);
 		_image_preprocess(&mat);
 
 		//Do infernece and calculate the time cost.
-		DWORD dwStart = GetTickCount();
+		// uint64_t dwStart = GetTickCount();
 		m_InferRequest.Infer();
 		
 		char szMsg[MAX_PATH] = { 0 };
@@ -87,7 +108,7 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 		Blob::Ptr output_blob = m_InferRequest.GetBlob(m_OutputName);
 		MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
 		if (!moutput) {
-			OutputDebugStringA("moutput is NULL!!!");
+			printf("moutput is NULL!!!");
 			return GENERAL_ERROR;
 		}
 		
@@ -105,6 +126,7 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 		
 		vector<ObjectData> objs;
 		for (int curProposal = 0; curProposal < maxProposalCount; curProposal++) {
+			printf(szMsg);
 			int image_id = static_cast<int>(output[curProposal * objectSize + 0]);
 			if (image_id < 0) {
 				break;
@@ -135,7 +157,7 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 				for (int n = 0; n < pOutput->nCount; n++) {
 					datas[n] = objs[n];
 				}
-				pOutput->pObjects = (INT_PTR)datas;
+				pOutput->pObjects = (void*)datas;
 			}
 			objs.clear();
 		}
@@ -145,12 +167,12 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 	}
 	catch (const std::exception& e)
 	{
-		OutputDebugStringA(e.what());
+		printf(e.what());
 		return GENERAL_ERROR;
 	}
 }
 
-float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
+float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, bool bAsync) {
 
 	float fconf = 0.0f;
 
@@ -164,13 +186,13 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 		_image_preprocess(&img1);		
 
 		//Do infernece and calculate the time cost.
-		DWORD dwStart = GetTickCount();
+		// DWORD dwStart = GetTickCount();
 		m_InferRequest.Infer();
 
 		Blob::Ptr output_blob = m_InferRequest.GetBlob(m_OutputName);
 		MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
 		if (!moutput) {
-			OutputDebugStringA("moutput1 is NULL!!!");
+			printf("moutput1 is NULL!!!");
 			return GENERAL_ERROR;
 		}
 
@@ -184,13 +206,13 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 		_image_preprocess(&img2);		
 
 		//Do infernece and calculate the time cost.
-		dwStart = GetTickCount();
+		// dwStart = GetTickCount();
 		m_InferRequest.Infer();		
 
 		Blob::Ptr output_blob1 = m_InferRequest.GetBlob(m_OutputName);
 		MemoryBlob::CPtr moutput1 = as<MemoryBlob>(output_blob1);
 		if (!moutput1) {
-			OutputDebugStringA("moutput2 is NULL!!!");
+			printf("moutput2 is NULL!!!");
 			return GENERAL_ERROR;
 		}
 
@@ -205,45 +227,45 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 	}
 	catch (const std::exception& e)
 	{
-		OutputDebugStringA(e.what());
+		printf(e.what());
 		return GENERAL_ERROR;
 	}
 }
 
-int	COPVO::ConverPtrToObjectDatas(int type, INT_PTR pInput, int size, INT_PTR *pOutput) {
+// int	COPVO::ConverPtrToObjectDatas(int type, void* pInput, int size, void* pOutput) {
 
-	int nResult = OK;
+// 	int nResult = OK;
 
-	if (pInput == NULL)
-		return PARAMETER_MISMATCH;
+// 	if (pInput == NULL)
+// 		return PARAMETER_MISMATCH;
 
-	switch (type) {
+// 	switch (type) {
 
-		case OBJECT_DETECTION_GENERAL:
-			{
-				*pOutput = _convert_to_objects(pInput, size);
-			}
-			break;
+// 		case OBJECT_DETECTION_GENERAL:
+// 			{
+// 				*pOutput = _convert_to_objects(pInput, size);
+// 			}
+// 			break;
 
-		case SPHEREFACE:
-			{
+// 		case SPHEREFACE:
+// 			{
 
-			}
-			break;
+// 			}
+// 			break;
 
-		default:
-			nResult = NOT_IMPLEMENTED;
-			break;
-	}
+// 		default:
+// 			nResult = NOT_IMPLEMENTED;
+// 			break;
+// 	}
 
-	return nResult;
-}
+// 	return nResult;
+// }
 
-int	COPVO::FreeObjectDatas(ObjectDatas pOutput) {
+int	COPVO::FreeObjectDatas(ObjectDatas* pOutput) {
 
-	if (pOutput.pObjects) {
-		free((void*)pOutput.pObjects);
-		pOutput.pObjects = NULL;
+	if (pOutput && pOutput->pObjects) {
+		free((ObjectDatas*)pOutput->pObjects);
+		pOutput->pObjects = NULL;
 	}
 
 	return OK;
@@ -254,32 +276,32 @@ void COPVO::_show_model_info() {
 
 	char szMsg[MAX_PATH] = { 0 };
 
-	sprintf_s(szMsg, "Device : %s", m_Device);
-	OutputDebugStringA(szMsg);
+	sprintf(szMsg, "Device : %s", m_Device);
+	printf(szMsg);
 
 	if (m_InputInfo) {
 		const SizeVector inputDims = m_InputInfo->getTensorDesc().getDims();
-		sprintf_s(szMsg, "Input [BxCxHxW] : [%dx%dx%dx%d]", inputDims[0], inputDims[1], inputDims[2], inputDims[3]);
-		OutputDebugStringA(szMsg);
-		sprintf_s(szMsg, "Precesioin : %d", (int)m_InputInfo->getPrecision());
-		OutputDebugStringA(szMsg);
+		sprintf(szMsg, "Input [BxCxHxW] : [%dx%dx%dx%d]", inputDims[0], inputDims[1], inputDims[2], inputDims[3]);
+		printf(szMsg);
+		sprintf(szMsg, "Precesioin : %d", (int)m_InputInfo->getPrecision());
+		printf(szMsg);
 	}
 
 	if (!m_InputName.empty()) {
-		OutputDebugStringA(m_InputName.c_str());
+		printf(m_InputName.c_str());
 	}
 	
 	if (m_OutputInfo) {
 		const SizeVector outputDims = m_OutputInfo->getTensorDesc().getDims();
-		sprintf_s(szMsg, "Output [x, x, x, x] : [%d, %d, %d, %d]", outputDims[0], outputDims[1], outputDims[2], outputDims[3]);
-		OutputDebugStringA(szMsg);
+		sprintf(szMsg, "Output [x, x, x, x] : [%d, %d, %d, %d]", outputDims[0], outputDims[1], outputDims[2], outputDims[3]);
+		printf(szMsg);
 
-		sprintf_s(szMsg, "Precesioin : %d", (int)m_OutputInfo->getPrecision());
-		OutputDebugStringA(szMsg);
+		sprintf(szMsg, "Precesioin : %d", (int)m_OutputInfo->getPrecision());
+		printf(szMsg);
 	}
 
 	if (!m_OutputName.empty()) {
-		OutputDebugStringA(m_OutputName.c_str());
+		printf(m_OutputName.c_str());
 	}
 }
 
@@ -307,7 +329,7 @@ void COPVO::_image_preprocess(Mat *pImage) {
 	}
 }
 
-INT_PTR COPVO::_convert_to_objects(INT_PTR pInput, int size) {
+void* COPVO::_convert_to_objects(void* pInput, int size) {
 
 	if (pInput == NULL || m_OutputInfo == NULL)
 		return NULL;
@@ -352,7 +374,7 @@ INT_PTR COPVO::_convert_to_objects(INT_PTR pInput, int size) {
 		objects.clear();
 	}*/
 
-	return OK;
+	return 0;
 }
 
 float COPVO::_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size) {

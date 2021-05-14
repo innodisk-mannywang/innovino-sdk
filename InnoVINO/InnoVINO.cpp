@@ -1,88 +1,42 @@
 // InnoVINO.cpp : Defines the initialization routines for the DLL.
 //
 
+#include "InnoVINO.h"
+#include "COPVO.h"
+
+void Log(const char *lpMsg) {
+#ifdef _WINDOWS_API_
+	OutputDebugStringA(lpMsg);
+#endif
+#ifdef _LINUX_API_
+	char szMsg[256] = {0};
+	sprintf(szMsg, "%s\n", lpMsg);
+	printf(szMsg);
+#endif
+}
+
+#ifdef _WINDOWS_API_
 #include "pch.h"
 #include "framework.h"
-#include "InnoVINO.h"
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
-//
-//TODO: If this DLL is dynamically linked against the MFC DLLs,
-//		any functions exported from this DLL which call into
-//		MFC must have the AFX_MANAGE_STATE macro added at the
-//		very beginning of the function.
-//
-//		For example:
-//
-//		extern "C" BOOL PASCAL EXPORT ExportedFunction()
-//		{
-//			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//			// normal function body here
-//		}
-//
-//		It is very important that this macro appear in each
-//		function, prior to any calls into MFC.  This means that
-//		it must appear as the first statement within the
-//		function, even before any object variable declarations
-//		as their constructors may generate calls into the MFC
-//		DLL.
-//
-//		Please see MFC Technical Notes 33 and 58 for additional
-//		details.
-//
-
-// CInnoVINOApp
-//
-//BEGIN_MESSAGE_MAP(CInnoVINOApp, CWinApp)
-//END_MESSAGE_MAP()
-//
-//
-//// CInnoVINOApp construction
-//
-//CInnoVINOApp::CInnoVINOApp()
-//{
-//	// TODO: add construction code here,
-//	// Place all significant initialization in InitInstance
-//}
-//
-//
-//// The one and only CInnoVINOApp object
-//
-//CInnoVINOApp theApp;
-//
-//
-//// CInnoVINOApp initialization
-//
-//BOOL CInnoVINOApp::InitInstance()
-//{
-//	CWinApp::InitInstance();
-//
-//	return TRUE;
-//}
-
-
-#include "COPVO.h"
-
-void Log(LPCSTR lpMsg) {
-#ifdef _INNOVINO_DEBUG_
-	OutputDebugStringA(lpMsg);
 #endif
-}
 
-void Log(LPCWSTR lpMsg) {
-#ifdef _INNOVINO_DEBUG_
-	OutputDebugStringW(lpMsg);
+#ifdef _LINUX_API_
+#define INT_PTR	unsigned long;
 #endif
-}
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ_Model *pModel) {
-
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ_Model *pModel) 
+#endif
+#ifdef _LINUX_API_
+extern "C" int IVINO_Init(unsigned long *dwServiceId, OMZ_Model *pModel)
+#endif
+{
 	Log("IVINO_Init...");
 
-	COPVO *pOPVO = new COPVO();
+	COPVO *pOPVO = new COPVO();	
 	if (pOPVO == NULL)
 		return PARAMETER_MISMATCH;
 
@@ -91,15 +45,25 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Init(INT_PTR *dwServiceId, OMZ
 
 	pOPVO->Init(pModel);
 
+#ifdef _WINDOWS_API_
 	*dwServiceId = (INT_PTR)pOPVO;
+#endif
+#ifdef _LINUX_API_
+	*dwServiceId = (unsigned long)pOPVO;
+#endif
 
 	Log("IVINO_Init...done");
 
 	return OK;
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_AddModel(INT_PTR dwServiceId, OMZ_Model *pModel) {
-
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) int WINAPI IVINO_AddModel(INT_PTR dwServiceId, OMZ_Model *pModel) 
+#endif
+#ifdef _LINUX_API_
+extern "C" int IVINO_AddModel(unsigned long dwServiceId, OMZ_Model *pModel)
+#endif
+{
 	Log("IVINO_AddModel...");
 
 	COPVO *pOPVO = (COPVO*)dwServiceId;
@@ -113,8 +77,13 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_AddModel(INT_PTR dwServiceId, 
 	return OK;
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) {
-
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) 
+#endif
+#ifdef _LINUX_API_
+extern "C" int IVINO_Inference(unsigned long dwServiceId, ImageData *pData, ObjectDatas *pOutput, bool bAsync)
+#endif
+{
 	Log("IVINO_Inference...");
 
 	COPVO *pOPVO = (COPVO*)dwServiceId;
@@ -122,14 +91,20 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId,
 		return PARAMETER_MISMATCH;
 
 	int nResult = pOPVO->Inference(pData, pOutput, bAsync);
-
+	//int nResult = 0;
 	Log("IVINO_Inference...done");
 
 	return nResult;
 }
 
-extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, BOOL bAsync) 
+#endif
+#ifdef _LINUX_API_
+extern "C" float IVINO_FaceRecog(unsigned long dwServiceId, ImageData *pImage1, ImageData *pImage2, bool bAsync)
+#endif
+{
 	Log("IVINO_FaceRecog...");
 
 	COPVO *pOPVO = (COPVO*)dwServiceId;
@@ -157,24 +132,35 @@ extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceI
 //
 //	return OK;
 //}
-//
-//extern "C" __declspec(dllexport) int WINAPI IVINO_FreeObjectDatas(INT_PTR dwServiceId, ObjectDatas pOutput) {
-//
-//	Log("IVINO_FreeObjectDatas...");
-//
-//	COPVO *pOPVO = (COPVO*)dwServiceId;
-//	if (pOPVO == NULL)
-//		return PARAMETER_MISMATCH;
-//	
-//	pOPVO->FreeObjectDatas(pOutput);
-//
-//	Log("IVINO_FreeObjectDatas...done");
-//
-//	return OK;
-//}
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_Uninit(INT_PTR dwServiceId) {
 
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) int WINAPI IVINO_FreeObjectDatas(INT_PTR dwServiceId, ObjectDatas* pOutput) 
+#endif
+#ifdef _LINUX_API_
+extern "C" int IVINO_FreeObjectDatas(unsigned long dwServiceId, ObjectDatas* pOutput)
+#endif
+{
+	Log("IVINO_FreeObjectDatas...");
+
+	COPVO *pOPVO = (COPVO*)dwServiceId;
+	if (pOPVO == NULL)
+		return PARAMETER_MISMATCH;
+	
+	pOPVO->FreeObjectDatas(pOutput);
+
+	Log("IVINO_FreeObjectDatas...done");
+
+	return OK;
+}
+
+#ifdef _WINDOWS_API_
+extern "C" __declspec(dllexport) int WINAPI IVINO_Uninit(INT_PTR dwServiceId)
+#endif
+#ifdef _LINUX_API_
+extern "C" int IVINO_Uninit(unsigned long dwServiceId)
+#endif
+{
 	Log("IVINO_Uninit...");
 
 	COPVO *pOPVO = (COPVO*)dwServiceId;
