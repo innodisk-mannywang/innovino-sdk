@@ -5,7 +5,9 @@ LIBRARY
 EXPORTS
 	IVINO_Init
 	IVINO_GetAvailableDevices
+	IVINO_AddEngine
 	IVINO_Inference
+	IVINO_FreeObjects
 	IVINO_AddFace
 	IVINO_FaceRecog
 	IVINO_Uninit

@@ -27,6 +27,7 @@ enum DeviceType
 	GNA,
 	GPU,
 	MYRIAD,
+	OTHER
 };
 
 #pragma pack(1)

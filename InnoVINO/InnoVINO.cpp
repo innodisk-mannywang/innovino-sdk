@@ -119,7 +119,7 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_AddEngine(INT_PTR dwServiceId,
 	return nEngineId;
 }
 
-extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) {
+extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, bool bAsync) {
 
 	Log("IVINO_Inference...");
 
@@ -132,6 +132,19 @@ extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId,
 	Log("IVINO_Inference...done");
 
 	return nResult;
+}
+
+extern "C" __declspec(dllexport) void WINAPI IVINO_FreeObjects(INT_PTR dwServiceId, ObjectDatas *pOutput) {
+
+	Log("IVINO_FreeObject...");
+
+	COPVO *pOPVO = (COPVO*)dwServiceId;
+	if (pOPVO == NULL)
+		return;
+
+	pOPVO->FreeObjects(pOutput);
+
+	Log("IVINO_FreeObject...done");
 }
 
 extern "C" __declspec(dllexport) int WINAPI IVINO_AddFace(INT_PTR dwServiceId, ImageData *pImage, LPCSTR lpLabel) {
@@ -164,7 +177,7 @@ extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecogEx(INT_PTR dwServic
 	return nResult;
 }
 
-extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
+extern "C" __declspec(dllexport) float WINAPI IVINO_FaceRecog(INT_PTR dwServiceId, ImageData *pImage1, ImageData *pImage2, bool bAsync) {
 
 	Log("IVINO_FaceRecog...");
 

@@ -23,11 +23,13 @@ public:
 	int				AddEngine(OMZ_Model *pModel);
 	int				Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync);
 	int				AddFace(ImageData *pImage, LPCSTR lpLabel);
+	void			FreeObjects(ObjectDatas *pOutput);
 	float			FaceRecogEx(ImageData *pImage, ObjectData *pOutput);
 	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync);
 	int				Uninit();
 
 private:
+	//For Intel pretrained model
 	InferRequest	m_InferRequest;
 	InputInfo::Ptr	m_InputInfo;
 	DataPtr			m_OutputInfo;
@@ -36,24 +38,24 @@ private:
 	float			m_fXRatio;
 	float			m_fYRatio;
 	Device*			m_Devices;
+	void			_show_model_info();
+	void			_image_preprocess(Mat *pImage);	
 
 	//For Face Recognition
-	InferRequest	mFaceDetect_InferRequest, mFaceRecognition_InferRequest;
-	InputInfo::Ptr	mFaceDetect_InputInfo, mFaceRecognition_InputInfo;
-	DataPtr			mFaceDetect_OutputInfo, mFaceRecognition_OutputInfo;
-	string			mFaceDetect_InputName, mFaceRecognition_InputName;
-	string			mFaceDetect_OutputName, mFaceRecognition_OutputName;
+	InferRequest	mFaceDetect_InferRequest, mFaceRecognition_InferRequest, mFaceAlignment_InferRequest;
+	InputInfo::Ptr	mFaceDetect_InputInfo, mFaceRecognition_InputInfo, mFaceAlignment_InputInfo;
+	DataPtr			mFaceDetect_OutputInfo, mFaceRecognition_OutputInfo, mFaceAlignment_OutputInfo;
+	string			mFaceDetect_InputName, mFaceRecognition_InputName, mFaceAlignment_InputName;
+	string			mFaceDetect_OutputName, mFaceRecognition_OutputName, mFaceAlignment_OutputName;
 	vector<float*>	mFaceFeatures;
 	vector<string>	mFaceLabels;
 	vector<Mat>		mFaceMats;
-
-	void			_show_model_info();
-	void			_image_preprocess(Mat *pImage);	
-	float			_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
-	float			_euclidean_distance(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
-
-	//For Face Recognition
-	int				_initial_frengine(LPCSTR lpDevice);
+	vector<float>	mFive_value;
+	int				_initial_frengine(LPCSTR lpDevice);	
 	void			_facedetection_preprocess(Mat *pImage);
 	void			_facerecognition_preprocess(Mat *pImage);
+	float			_get_angle_2points(int p1x, int p1y, int p2x, int p2y);
+	void			_facealignment_preprocess(Mat *pImage);	
+	float			_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
+	float			_euclidean_distance(const float *pfVector1, const float *pfVector2, unsigned int vector_size);
 };

@@ -36,10 +36,29 @@ int COPVO::GetAvailableDevices(AvailableDevices *pDevices) {
 
 	int nDeviceCount = 0;
 	for (int i = 0; i < availableDevices.size(); i++) {
-		if (strcmp(availableDevices[i].c_str(), "GNA") != 0 && strcmp(availableDevices[i].c_str(), "GPU") != 0) {
-			sprintf_s(m_Devices[nDeviceCount].szName, "%s", availableDevices[i].c_str());
-			nDeviceCount++;
-		}		
+		
+		int nType = OTHER;
+
+		if (strcmp(availableDevices[i].c_str(), "CPU") == 0)
+		{
+			nType = CPU;
+		}
+		else if (strcmp(availableDevices[i].c_str(), "GPU") == 0) 
+		{
+			nType = GPU;
+		}
+		else if (strcmp(availableDevices[i].c_str(), "MYRIAD") == 0)
+		{
+			nType = MYRIAD;
+		}
+		else if (strcmp(availableDevices[i].c_str(), "GNA") == 0)
+		{
+			nType = GNA;
+		}
+
+		m_Devices[nDeviceCount].nType = CPU;
+		sprintf_s(m_Devices[nDeviceCount].szName, "%s", availableDevices[i].c_str());
+		nDeviceCount++;
 	}
 
 	pDevices->nCount = nDeviceCount;
@@ -193,12 +212,25 @@ int COPVO::Inference(ImageData *pImage, ObjectDatas *pOutput, BOOL bAsync) {
 	}
 }
 
+void COPVO::FreeObjects(ObjectDatas *pOutput)
+{
+	if (pOutput && pOutput->pObjects) {
+		free((ObjectDatas*)pOutput->pObjects);
+		pOutput->pObjects = NULL;
+	}
+}
+
 float COPVO::FaceRecogEx(ImageData *pImage, ObjectData *pOutput) {
 
 	try
 	{
 		//Scale image size that fit input size in model.
 		Mat img1(pImage->uiHeight, pImage->uiWidth, CV_8UC3, (BYTE*)pImage->pData);
+		//Face Alignment
+		_facealignment_preprocess(&img1);
+		//Face detection
+		_facedetection_preprocess(&img1);
+		//Get face feature
 		_facerecognition_preprocess(&img1);
 
 		//Do infernece and calculate the time cost.
@@ -214,14 +246,16 @@ float COPVO::FaceRecogEx(ImageData *pImage, ObjectData *pOutput) {
 
 		auto moutputHolder = moutput->rmap();
 		const float *output = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-		float fFace[513] = { 0.0f };
-		memcpy(fFace, output, 512);
+		/*const int nFaceFeatures = 512;*/
+		const int nFaceFeatures = 256;
+		float fFace[nFaceFeatures + 1] = { 0.0f };
+		memcpy(fFace, output, nFaceFeatures);
 		
 		float highestValue = 0.0f;
 		int	  highestIndex = 0;
 
 		for (int i = 0 ; i < mFaceFeatures.size() - 1 ; i++ ) {
-			float result = _cosine_similarity(fFace, mFaceFeatures[i], 512);
+			float result = _cosine_similarity(fFace, mFaceFeatures[i], nFaceFeatures);
 			if (result > highestValue) {
 				highestValue = result;
 				highestIndex = i;
@@ -232,7 +266,6 @@ float COPVO::FaceRecogEx(ImageData *pImage, ObjectData *pOutput) {
 			pOutput->conf = highestValue;
 			pOutput->label = stoi(mFaceLabels[highestIndex]);
 		}
-
 		return highestValue;
 	}
 	catch (const std::exception& e)
@@ -254,7 +287,10 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 	try
 	{
 		//Scale image size that fit input size in model.
-		Mat img1(pImage1->uiHeight, pImage1->uiWidth, CV_8UC3, (BYTE*)pImage1->pData);		
+		Mat img1(pImage1->uiHeight, pImage1->uiWidth, CV_8UC3, (BYTE*)pImage1->pData);
+		//Face Alignment
+		_facealignment_preprocess(&img1);
+		//Get face features
 		_facerecognition_preprocess(&img1);
 
 		//Do infernece and calculate the time cost.
@@ -270,11 +306,15 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 
 		auto moutputHolder = moutput->rmap();
 		const float *output1 = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-		float fFace1[513] = { 0 };
-		memcpy(fFace1, output1, 512);
+		const int nFaceFeatures = 256;
+		float fFace1[nFaceFeatures + 1] = { 0 };
+		memcpy(fFace1, output1, nFaceFeatures);
 
 		//Scale image size that fit input size in model.
 		Mat img2(pImage2->uiHeight, pImage2->uiWidth, CV_8UC3, (BYTE*)pImage2->pData);
+		//Face Alignment
+		_facealignment_preprocess(&img2);
+		//Get face features
 		_facerecognition_preprocess(&img2);
 
 		//Do infernece and calculate the time cost.
@@ -290,10 +330,10 @@ float COPVO::FaceRecog(ImageData *pImage1, ImageData *pImage2, BOOL bAsync) {
 
 		auto moutputHolder1 = moutput1->rmap();
 		const float *output2 = moutputHolder1.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-		float fFace2[513] = { 0 };
-		memcpy(fFace2, output2, 512);
+		float fFace2[nFaceFeatures + 1] = { 0 };
+		memcpy(fFace2, output2, nFaceFeatures);
 
-		fconf = _cosine_similarity(fFace1, fFace2, 512);
+		fconf = _cosine_similarity(fFace1, fFace2, nFaceFeatures);
 
 		return fconf;
 	}
@@ -356,6 +396,8 @@ void COPVO::_image_preprocess(Mat *pImage) {
 			}
 		}
 	}
+
+	*pImage = resized;
 }
 
 float COPVO::_cosine_similarity(const float *pfVector1, const float *pfVector2, unsigned int vector_size) {
@@ -385,17 +427,19 @@ float COPVO::_euclidean_distance(const float *pfVector1, const float *pfVector2,
 int COPVO::_initial_frengine(LPCSTR lpDevice) {
 
 	try
-	{
+	{		
 		//Face Detection Engine initial
 		//1. Initialize Core
-		Core ie;
+		Core ie;		
 		//2. Read Model IR
 		char szPath[MAX_PATH] = { 0 };
 		GetModuleFileNameA(AfxGetInstanceHandle(), szPath, MAX_PATH);
 		*(strrchr(szPath, '\\') + 1) = 0;
-		strcat(szPath, "face-detection-0102.xml");
+		strcat(szPath, "face-detection-0102.xml");		
+		OutputDebugStringA(szPath);
 		CNNNetwork cnnNetwork = ie.ReadNetwork(szPath);
-		//3. Configure Input & Output		
+		OutputDebugStringA("2. Read Model IR");
+		//3. Configure Input & Output
 		InputsDataMap inputsDataMap = cnnNetwork.getInputsInfo();
 		InputsDataMap::iterator input = inputsDataMap.begin();
 		mFaceDetect_InputName = input->first;
@@ -410,10 +454,14 @@ int COPVO::_initial_frengine(LPCSTR lpDevice) {
 		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices. 
 		//Generally, FP32 is preferable as it is most ubiquitous.
 		mFaceDetect_OutputInfo->setPrecision(Precision::FP32);
+		OutputDebugStringA("3. Configure Input & Output");
 		//4. Load Model		
 		ExecutableNetwork exeNetwork = ie.LoadNetwork(cnnNetwork, lpDevice);
+		OutputDebugStringA("4. Load Model");
 		//5. Create InferRequest
 		mFaceDetect_InferRequest = exeNetwork.CreateInferRequest();
+
+		OutputDebugStringA("Face Detection Engine initial finish!");
 
 		//Face Recognition Engine initial
 		//1. Initialize Core
@@ -421,27 +469,61 @@ int COPVO::_initial_frengine(LPCSTR lpDevice) {
 		//2. Read Model IR
 		GetModuleFileNameA(AfxGetInstanceHandle(), szPath, MAX_PATH);
 		*(strrchr(szPath, '\\') + 1) = 0;
-		strcat(szPath, "Sphereface.xml");
+		strcat(szPath, "face-reidentification-retail-0095.xml");
+		//strcat(szPath, "Sphereface.xml");
 		CNNNetwork fr_cnnNetwork = fr_ie.ReadNetwork(szPath);
-		//3. Configure Input & Output		
+		//3. Configure Input & Output
 		InputsDataMap fr_inputsDataMap = fr_cnnNetwork.getInputsInfo();
 		InputsDataMap::iterator fr_input = fr_inputsDataMap.begin();
 		mFaceRecognition_InputName = fr_input->first;
 		mFaceRecognition_InputInfo = fr_input->second;
-		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices. 
+		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices.
 		//Generally, U8 is preferable as it is most ubiquitous.
 		mFaceRecognition_InputInfo->setPrecision(Precision::U8);
 		OutputsDataMap fr_outpusDataMap = fr_cnnNetwork.getOutputsInfo();
 		OutputsDataMap::iterator fr_output = fr_outpusDataMap.begin();
 		mFaceRecognition_OutputName = fr_output->first;
 		mFaceRecognition_OutputInfo = fr_output->second;
-		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices. 
+		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices.
 		//Generally, FP32 is preferable as it is most ubiquitous.
 		mFaceRecognition_OutputInfo->setPrecision(Precision::FP32);
-		//4. Load Model		
+		//4. Load Model
 		ExecutableNetwork fr_exeNetwork = fr_ie.LoadNetwork(fr_cnnNetwork, lpDevice);
 		//5. Create InferRequest
 		mFaceRecognition_InferRequest = fr_exeNetwork.CreateInferRequest();
+
+		OutputDebugStringA("Face Recognition Engine initial finish!");
+
+		//Face Alignment Engine initial
+		//1. Initialize Core
+		Core fa_ie;
+		//2. Read Model IR
+		GetModuleFileNameA(AfxGetInstanceHandle(), szPath, MAX_PATH);
+		*(strrchr(szPath, '\\') + 1) = 0;
+		strcat(szPath, "landmarks-regression-retail-0009.xml");
+		OutputDebugStringA(szPath);
+		CNNNetwork fa_cnnNetwork = fa_ie.ReadNetwork(szPath);
+		//3. Configure Input & Output
+		InputsDataMap fa_inputsDataMap = fa_cnnNetwork.getInputsInfo();
+		InputsDataMap::iterator fa_input = fa_inputsDataMap.begin();
+		mFaceAlignment_InputName = fa_input->first;
+		mFaceAlignment_InputInfo = fa_input->second;
+		//For Multi-Device and Heterogeneous execution the supported input precision depends on the actual underlying devices.
+		//Generally, U8 is preferable as it is most ubiquitous.
+		mFaceAlignment_InputInfo->setPrecision(Precision::U8);
+		OutputsDataMap fa_outpusDataMap = fa_cnnNetwork.getOutputsInfo();
+		OutputsDataMap::iterator fa_output = fa_outpusDataMap.begin();
+		mFaceAlignment_OutputName = fa_output->first;
+		mFaceAlignment_OutputInfo = fa_output->second;
+		//For Multi-Device and Heterogeneous execution the supported output precision depends on the actual underlying devices.
+		//Generally, FP32 is preferable as it is most ubiquitous.
+		mFaceAlignment_OutputInfo->setPrecision(Precision::FP32);
+		//4. Load Model
+		ExecutableNetwork fa_exeNetwork = fa_ie.LoadNetwork(fa_cnnNetwork, lpDevice);
+		//5. Create InferRequest
+		mFaceAlignment_InferRequest = fa_exeNetwork.CreateInferRequest();
+
+		OutputDebugStringA("Face Alignment Engine initial finish!");
 	}
 	catch (const std::exception& e)
 	{
@@ -452,7 +534,7 @@ int COPVO::_initial_frengine(LPCSTR lpDevice) {
 
 void COPVO::_facedetection_preprocess(Mat *pImage) {
 
-	if (mFaceDetect_InputInfo == NULL)
+	if (mFaceDetect_InputInfo == NULL || pImage == NULL)
 		return;
 
 	const SizeVector inputDims = mFaceDetect_InputInfo->getTensorDesc().getDims();
@@ -472,10 +554,57 @@ void COPVO::_facedetection_preprocess(Mat *pImage) {
 			}
 		}
 	}
+
+	mFaceDetect_InferRequest.Infer();
+
+	Blob::Ptr output_blob = mFaceDetect_InferRequest.GetBlob(mFaceDetect_OutputName);
+	MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
+	if (!moutput) {
+		OutputDebugStringA("moutput is NULL!!!");
+		return ;
+	}
+
+	auto moutputHolder = moutput->rmap();
+	const float *output = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+	const SizeVector outputDims = mFaceDetect_OutputInfo->getTensorDesc().getDims();
+	const int objectSize = outputDims[1];	
+	
+	m_fXRatio = (float)pImage->cols / (float)resized.cols;
+	m_fYRatio = (float)pImage->rows / (float)resized.rows;
+
+	vector<ObjectData> objs;
+	for (int curProposal = 0; curProposal < 1; curProposal++) {
+		ObjectData obj = { 0 };
+		obj.conf = output[curProposal * objectSize + 2];
+		obj.label = static_cast<int>(output[curProposal * objectSize + 1]);
+		//sprintf(obj.label, "%d", static_cast<int>(output[curProposal * objectSize + 1]));
+		obj.x_min = static_cast<int>(output[curProposal * objectSize + 3] * resized.cols) ;
+		obj.y_min = static_cast<int>(output[curProposal * objectSize + 4] * resized.rows);
+		obj.x_max = static_cast<int>(output[curProposal * objectSize + 5] * resized.cols);
+		obj.y_max = static_cast<int>(output[curProposal * objectSize + 6] * resized.rows);
+
+		//rescale the object position.
+		/*obj.x_min *= m_fXRatio;
+		obj.x_max *= m_fXRatio;
+		obj.y_min *= m_fYRatio;
+		obj.y_max *= m_fYRatio;*/
+
+		/*char szMsg[MAX_PATH] = { 0 };
+		sprintf(szMsg, "x : %d, y : %d, width : %d, height : %d", obj.x_min, obj.y_min, (obj.x_max - obj.x_min + 1), (obj.y_max - obj.y_min + 1));
+		OutputDebugStringA(szMsg);*/
+
+		/*Mat m_roi = *pImage(cv::Rect(250, 300, 100, 100));*/
+		/*Mat roi = *pImage;
+		roi(cv::Rect(obj.x_min, obj.y_min, (obj.x_max - obj.x_min + 1), (obj.y_max - obj.y_min + 1)));*/
+		//imshow("roi", roi);
+		Mat roi = resized(cv::Rect(obj.x_min, obj.y_min, (obj.x_max - obj.x_min + 1), (obj.y_max - obj.y_min + 1)));
+		//imshow("roi", roi);
+		*pImage = roi;
+	}
 }
 
 void COPVO::_facerecognition_preprocess(Mat *pImage) {
-	if (mFaceRecognition_InputInfo == NULL)
+	if (mFaceRecognition_InputInfo == NULL || pImage == NULL)
 		return;
 
 	const SizeVector inputDims = mFaceRecognition_InputInfo->getTensorDesc().getDims();
@@ -497,12 +626,72 @@ void COPVO::_facerecognition_preprocess(Mat *pImage) {
 	}
 }
 
+void COPVO::_facealignment_preprocess(Mat *pImage) {
+
+	if (mFaceAlignment_InputInfo == NULL || pImage == NULL)
+		return;
+
+	const SizeVector inputDims = mFaceAlignment_InputInfo->getTensorDesc().getDims();
+	const int nChanelNum = inputDims[1];
+	const int nHeight = inputDims[2];
+	const int nWidth = inputDims[3];
+
+	Mat resized;
+	resize(*pImage, resized, cv::Size(nWidth, nHeight));
+
+	Blob::Ptr blob = mFaceAlignment_InferRequest.GetBlob(mFaceAlignment_InputName);
+	unsigned char* ptr = (unsigned char*)blob->buffer();
+	for (int c = 0; c < nChanelNum; ++c) {
+		for (int y = 0; y < nHeight; ++y) {
+			for (int x = 0; x < nWidth; ++x) {
+				*(ptr++) = resized.at<Vec3b>(y, x)[c];
+			}
+		}
+	}
+
+	//Get landmark
+	mFaceAlignment_InferRequest.Infer();
+
+	Blob::Ptr output_blob = mFaceAlignment_InferRequest.GetBlob(mFaceAlignment_OutputName);
+	MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
+	if (!moutput) {
+		OutputDebugStringA("moutput is NULL!!!");
+		return;
+	}
+
+	auto moutputHolder = moutput->rmap();
+	const float *output = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+	float landmark[11] = { 0.0f };
+	memcpy(landmark, output, 10 * sizeof(float));
+
+	float angler = _get_angle_2points(landmark[0] * resized.cols, landmark[1] * resized.rows, landmark[2] * resized.cols, landmark[3] * resized.rows);
+
+	Point2f pt((landmark[0] * pImage->cols + landmark[2] * pImage->cols) / 2, (landmark[1] * pImage->rows + landmark[3] * pImage->rows) / 2);          //point from where to rotate		
+	Mat r = getRotationMatrix2D(pt, angler, 1.0);      //Mat object for storing after rotation
+
+	Mat dst;      //Mat object for output image file
+	warpAffine(*pImage, dst, r, Size(pImage->cols, pImage->rows));  ///applie an affine transforation to image.
+
+	*pImage = dst;
+}
+
+float COPVO::_get_angle_2points(int p1x, int p1y, int p2x, int p2y) {
+	int deltaY = p2y - p1y;
+	int deltaX = p2x - p1x;
+	return atan2(deltaY, deltaX) * 180 / 3.141;
+}
+
 int	COPVO::AddFace(ImageData *pImage, LPCSTR lpLabel) {
 
 	try
 	{
 		//Scale image size that fit input size in model.
 		Mat img1(pImage->uiHeight, pImage->uiWidth, CV_8UC3, (BYTE*)pImage->pData);
+		//Face Alignment
+		_facealignment_preprocess(&img1);
+		//Face detection
+		_facedetection_preprocess(&img1);
+		//Face recognition
 		_facerecognition_preprocess(&img1);
 
 		//Do infernece and calculate the time cost.
@@ -518,10 +707,11 @@ int	COPVO::AddFace(ImageData *pImage, LPCSTR lpLabel) {
 
 		auto moutputHolder = moutput->rmap();
 		const float *output = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
-		/*float fFace[513] = { 0 };*/
-		float* fFace = (float*)malloc(sizeof(float) * 513);
-		memset(fFace, 0.0f, sizeof(float) * 513);
-		memcpy(fFace, output, 512);
+		/*const int nFaceFeatures = 512;*/
+		const int nFaceFeatures = 256;
+		float* fFace = (float*)malloc(sizeof(float) * (nFaceFeatures + 1));
+		memset(fFace, 0.0f, sizeof(float) * (nFaceFeatures + 1));
+		memcpy(fFace, output, nFaceFeatures);
 
 		mFaceFeatures.push_back(fFace);
 		mFaceLabels.push_back(lpLabel);
@@ -534,4 +724,3 @@ int	COPVO::AddFace(ImageData *pImage, LPCSTR lpLabel) {
 
 	return OK;
 }
-
