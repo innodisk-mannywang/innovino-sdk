@@ -22,6 +22,7 @@ public:
 	int				Init(OMZ_Model *pModel);
 	int				AddModel(OMZ_Model *pModel);
 	int				Inference(ImageData *pImage, ObjectDatas *pOutput, bool bAsync);
+	int				Inference(ImageData *pImage, bool bAsync);
 	float			FaceRecog(ImageData *pImage1, ImageData *pImage2, bool bAsync);
 	// int				ConverPtrToObjectDatas(int type, void *pInput, int size, void *pOutput);
 	int				FreeObjectDatas(ObjectDatas *pOutput);

@@ -1,7 +1,7 @@
 # Makefile template for shared library
 
 CC = g++
-CFLAGS = -fPIC -Wall -Wextra -O3 -g -m64 -std=gnu99
+CFLAGS = -fPIC -Wall -Wextra -O3 -g -m64
 LDFLAGS = -linference_engine -lopencv_core -lopencv_dnn -lopencv_imgcodecs -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_video -lpthread
 RM = rm
 TARGET_LIB = libInnoVINO.so

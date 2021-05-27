@@ -88,12 +88,11 @@ int main() {
         img.uiSize = img.uiHeight * img.uiWidth * mat.channels();
         img.pData = mat.data;
 
-        char szMsg[PATH_MAX] = {0};
-        ObjectDatas objs;
-        int nResult = IVINO_Inference(ulServiceId, &img, &objs, false);
-        if(nResult){
-            for(int i = 0 ; i < objs.nCount ; i++){
-                ObjectData* obj = (ObjectData*)(objs.pObjects + sizeof(ObjectData) * i);
+        ObjectDatas *objs = NULL;
+        objs = IVINO_Inference(ulServiceId, &img, false);
+        if(objs){
+            for(int i = 0 ; i < objs->nCount ; i++){
+                ObjectData* obj = (ObjectData*)(objs->pObjects + sizeof(ObjectData) * i);
                 if(obj->conf < 0.9f || obj->label != 1)
                     continue;
 
@@ -104,14 +103,14 @@ int main() {
         imshow("face", mat);
         cv::waitKey(0);
 
-        IVINO_FreeObjectDatas(ulServiceId, &objs);
+        IVINO_FreeObjectDatas(ulServiceId, objs);
 
         IVINO_Uninit(ulServiceId);
 
         printf("dlclose...\n");
         if(handle){
             dlclose(handle);
-        }        
+        }
         printf("dlclose...done\n");
     }
     catch(const std::exception& e)

@@ -4,6 +4,9 @@
 #include "InnoVINO.h"
 #include "COPVO.h"
 
+
+ObjectDatas* g_ObjectDatas = NULL;
+
 void Log(const char *lpMsg) {
 #ifdef _WINDOWS_API_
 	OutputDebugStringA(lpMsg);
@@ -45,6 +48,9 @@ extern "C" int IVINO_Init(unsigned long *dwServiceId, OMZ_Model *pModel)
 
 	pOPVO->Init(pModel);
 
+	if(g_ObjectDatas == NULL)
+		g_ObjectDatas = (ObjectDatas*)malloc(sizeof(ObjectDatas));
+
 #ifdef _WINDOWS_API_
 	*dwServiceId = (INT_PTR)pOPVO;
 #endif
@@ -77,24 +83,50 @@ extern "C" int IVINO_AddModel(unsigned long dwServiceId, OMZ_Model *pModel)
 	return OK;
 }
 
+// #ifdef _WINDOWS_API_
+// extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) 
+// #endif
+// #ifdef _LINUX_API_
+// extern "C" int IVINO_Inference(unsigned long dwServiceId, ImageData *pData, ObjectDatas *pOutput, bool bAsync)
+// #endif
+// {
+// 	Log("IVINO_Inference...");
+
+// 	COPVO *pOPVO = (COPVO*)dwServiceId;
+// 	if (pOPVO == NULL)
+// 		return PARAMETER_MISMATCH;
+
+// 	memset(g_ObjectDatas, 0, sizeof(ObjectDatas));
+	
+// 	int nResult = pOPVO->Inference(pData, g_ObjectDatas, bAsync);
+
+// 	*pOutput = (void*)g_ObjectDatas;
+
+// 	Log("IVINO_Inference...done");
+
+// 	return nResult;
+// }
+
 #ifdef _WINDOWS_API_
-extern "C" __declspec(dllexport) int WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, ObjectDatas *pOutput, BOOL bAsync) 
+extern "C" __declspec(dllexport) ObjectDatas* WINAPI IVINO_Inference(INT_PTR dwServiceId, ImageData *pData, BOOL bAsync) 
 #endif
 #ifdef _LINUX_API_
-extern "C" int IVINO_Inference(unsigned long dwServiceId, ImageData *pData, ObjectDatas *pOutput, bool bAsync)
+extern "C" ObjectDatas* IVINO_Inference(unsigned long dwServiceId, ImageData *pData, bool bAsync)
 #endif
 {
-	Log("IVINO_Inference...");
+	Log("IVINO_PtrInference...");
 
 	COPVO *pOPVO = (COPVO*)dwServiceId;
 	if (pOPVO == NULL)
-		return PARAMETER_MISMATCH;
+		return NULL;
+	
+	memset(g_ObjectDatas, 0, sizeof(ObjectDatas));
 
-	int nResult = pOPVO->Inference(pData, pOutput, bAsync);
-	//int nResult = 0;
-	Log("IVINO_Inference...done");
+	pOPVO->Inference(pData, g_ObjectDatas, bAsync);	
 
-	return nResult;
+	Log("IVINO_PtrInference...done");
+
+	return g_ObjectDatas;
 }
 
 
@@ -146,7 +178,7 @@ extern "C" int IVINO_FreeObjectDatas(unsigned long dwServiceId, ObjectDatas* pOu
 	COPVO *pOPVO = (COPVO*)dwServiceId;
 	if (pOPVO == NULL)
 		return PARAMETER_MISMATCH;
-	
+
 	pOPVO->FreeObjectDatas(pOutput);
 
 	Log("IVINO_FreeObjectDatas...done");
@@ -166,6 +198,11 @@ extern "C" int IVINO_Uninit(unsigned long dwServiceId)
 	COPVO *pOPVO = (COPVO*)dwServiceId;
 	if (pOPVO == NULL)
 		return PARAMETER_MISMATCH;
+
+	if(g_ObjectDatas){
+		free(g_ObjectDatas);
+		g_ObjectDatas = NULL;
+	}
 
 	pOPVO->Uninit();
 
